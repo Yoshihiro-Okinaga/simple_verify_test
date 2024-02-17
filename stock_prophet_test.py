@@ -26,13 +26,15 @@ NO_TRAINING_DAYS = 20
 FORECAST_DAYS = 1
 GRAPH_DAYS = 100
 DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
-START_DATE = '2018/01/01'
+START_DATE = '2005/01/01'
+END_DATE = '2024/12/31'
 
 # データ読み込み
 def load_data(url: str) -> pd.DataFrame:
     df: pd.DataFrame = pd.read_csv(url, parse_dates=[0])
     df = df.sort_values(by='日付')
     df = df.query('日付 >= @START_DATE')
+    df = df.query('日付 < @END_DATE')
     df = df[['日付', '始値']]
     df.columns = ['ds', 'y']
     return df
@@ -51,8 +53,19 @@ def split_data(df: pd.DataFrame, no_training_days:int, graph_days:int) -> tuple:
 
 # 学習モデル作成
 def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
+    # 欠損値がある日を見つける
+    missing_dates = x_train[x_train['y'].isnull()]['ds']
+
+    # ホリデーとして扱う
+    holidays = pd.DataFrame({
+        'holiday': 'missing_data',
+        'ds': missing_dates,
+        'lower_window': 0,
+        'upper_window': 1,
+    })
+
     model: Prophet = Prophet(yearly_seasonality=False, weekly_seasonality=False,
-        daily_seasonality=False,
+        daily_seasonality=False, holidays=holidays, changepoint_prior_scale=0.5,
         seasonality_mode='multiplicative')
     model.fit(x_train)
     return model
