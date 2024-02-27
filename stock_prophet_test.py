@@ -7,6 +7,7 @@ import datetime
 import os
 import sys
 from sklearn import preprocessing
+from sklearn.metrics import mean_squared_error
 # matplotlib日本語化対応
 import japanize_matplotlib
 
@@ -22,7 +23,7 @@ elif os.name == 'nt':
 # NO_TRAINING_DAYS=15だと、2024/02/01までのデータを使ってトレーニングをします
 # FORECAST_DAYS=5なら、2/24/02/21まで予測をします。
 
-NO_TRAINING_DAYS = 20
+NO_TRAINING_DAYS = 21
 FORECAST_DAYS = 1
 GRAPH_DAYS = 100
 DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
@@ -49,6 +50,7 @@ def split_data(df: pd.DataFrame, no_training_days:int, graph_days:int) -> tuple:
     x_train: pd.DataFrame = df[train_index]
     x_test: pd.DataFrame = df[test_index]
     x_graph_test: pd.DataFrame = df[graph_train_index]
+    print(mday)
     return x_train, x_test, x_graph_test
 
 # 学習モデル作成
@@ -66,7 +68,8 @@ def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
 
     model: Prophet = Prophet(yearly_seasonality=False, weekly_seasonality=False,
         daily_seasonality=False, holidays=holidays, changepoint_prior_scale=0.5,
-        seasonality_mode='multiplicative')
+        changepoint_range=0.9, seasonality_mode='multiplicative')
+    assert not np.isnan(x_train.iloc[-1]['y']), '検証値の最後はnullにしないで'
     model.fit(x_train)
     return model
 
@@ -78,7 +81,7 @@ def predict(model: Prophet, periods: int) -> pd.DataFrame:
     forecast: pd.DataFrame = model.predict(future)
     return forecast
 
-# 結果をグラフに
+# 結果をプロット
 def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.plot(ypred, label='予測結果', c='r')
@@ -96,22 +99,31 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     model = create_and_train_model(x_train)
 
     forecast = predict(model, no_training_days+forecast_days)
-    ypred = forecast[-(no_training_days+forecast_days):]['yhat'].to_numpy()
-    ytest = x_test['y'].values
+    y_date = forecast[-(no_training_days+forecast_days):]['ds'].dt.date.to_numpy()
+    y_pred = forecast[-(no_training_days+forecast_days):]['yhat'].to_numpy()
+    y_test = x_test['y'].values
+    print(y_date)
+    print(y_pred)
+    print(y_test)
 
     last_ytest_data = x_graph_test['y'].values[-1]
-    if ytest.size > 0:
-        last_ytest_data = ytest[-1]
+    if y_test.size > 0:
+        last_ytest_data = y_test[-1]
     for i in range(forecast_days):
-        ytest = np.append(ytest, last_ytest_data)
+        y_test = np.append(y_test, last_ytest_data)
 
-    ypred_total = np.hstack([x_graph_test['y'].values, ypred])
-    ytest_total = np.hstack([x_graph_test['y'].values, ytest])
-    y_total = np.stack([ypred_total, ytest_total], 1)
+    mask = ~np.isnan(y_pred) & ~np.isnan(y_test)
+    y_pred_true = y_pred[mask]
+    y_test_true = y_test[mask]
+    mse = mean_squared_error(y_pred_true, y_test_true)
+    print(mse)
+    y_pred_total = np.hstack([x_graph_test['y'].values, y_pred])
+    y_test_total = np.hstack([x_graph_test['y'].values, y_test])
+    y_total = np.stack([y_pred_total, y_test_total], 1)
     total_df = pd.DataFrame(data=y_total,
                              columns=['pred', 'test'])
     total_df = total_df.dropna(subset='test')
-    plot_results(total_df['pred'], total_df['test'])
+    # plot_results(total_df['pred'], total_df['test'])
 
 def main() -> None:
     prophet_test(DATA_URL, NO_TRAINING_DAYS, FORECAST_DAYS, GRAPH_DAYS)

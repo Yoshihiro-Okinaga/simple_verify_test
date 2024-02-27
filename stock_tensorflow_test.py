@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, LSTM, SimpleRNN
+from sklearn.metrics import mean_squared_error
 
 sys.path.append("../utility")
 import stock
@@ -81,10 +82,12 @@ def verify(dataframe, base_str, finish_days, training_days_rate, length_of_seque
 
     predicted = model.predict(x_test, 32, 0)
     result = pd.DataFrame(predicted)
-    result.columns = ['predict']
-    result['actual'] = y_test
-    result.plot()
-    plt.show()
+    mse = mean_squared_error(result, y_test)
+    print(mse)
+    # result.columns = ['predict']
+    # result['actual'] = y_test
+    # result.plot()
+    # plt.show()
 
 
 DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
