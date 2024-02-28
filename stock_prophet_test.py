@@ -8,8 +8,6 @@ import os
 import sys
 from sklearn import preprocessing
 from sklearn.metrics import mean_squared_error
-# matplotlib日本語化対応
-import japanize_matplotlib
 
 sys.path.append("../utility")
 import stock
@@ -84,11 +82,11 @@ def predict(model: Prophet, periods: int) -> pd.DataFrame:
 # 結果をプロット
 def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(ypred, label='予測結果', c='r')
-    ax.plot(ytest, label='正解データ', c='b')
+    ax.plot(ypred, label='pred', c='r')
+    ax.plot(ytest, label='test', c='b')
     ax.grid()
     ax.legend()
-    ax.set_title('テスト予測')
+    ax.set_title('test')
     plt.show()
 
 # メイン
@@ -102,9 +100,9 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     y_date = forecast[-(no_training_days+forecast_days):]['ds'].dt.date.to_numpy()
     y_pred = forecast[-(no_training_days+forecast_days):]['yhat'].to_numpy()
     y_test = x_test['y'].values
-    print(y_date)
-    print(y_pred)
-    print(y_test)
+
+    for date, actual, predicted in zip(y_date, y_test, y_pred):
+        print(date, actual, predicted)
 
     last_ytest_data = x_graph_test['y'].values[-1]
     if y_test.size > 0:
@@ -123,9 +121,11 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     total_df = pd.DataFrame(data=y_total,
                              columns=['pred', 'test'])
     total_df = total_df.dropna(subset='test')
-    # plot_results(total_df['pred'], total_df['test'])
+    plot_results(total_df['pred'], total_df['test'])
 
 def main() -> None:
+    stock.reset_random()
+
     prophet_test(DATA_URL, NO_TRAINING_DAYS, FORECAST_DAYS, GRAPH_DAYS)
 
 if __name__ == '__main__':

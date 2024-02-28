@@ -23,16 +23,22 @@ class Prediction:
         start_idx = n_prev-1
         end_idx = -1
         data_len = len(data)
+        date_len = len(date)
+        last_date:pd.Timestamp = date.iloc[-1]
         for i in range(data_len-(n_prev-1)):
             X.append(data.iloc[i:(i+n_prev)].to_numpy())
-            Date.append(date.iloc[i])
+            if i+n_prev-1 < date_len:
+                Date.append(date.iloc[i+n_prev-1])
+            else:
+                Date.append(last_date)
+                last_date += pd.Timedelta(days=1)
 
             finish_idx = i+(n_prev-1)+self.__finish_days
             if finish_idx < data_len:
                 Y.append(data.iloc[finish_idx].to_numpy())
                 end_idx += 1
             else:
-                Y.append(data.iloc[0].to_numpy())
+                Y.append(np.array([np.nan]))#data.iloc[0].to_numpy())
         retX = np.array(X)
         retY = np.array(Y)
         retDate = np.array(Date)
@@ -41,6 +47,8 @@ class Prediction:
     def create_model(self) -> Sequential:
         model = Sequential()
         model.add(SimpleRNN(300, return_sequences=False))
+        model.add(Dense(64, activation="linear"))
+        model.add(Dense(128, activation="linear"))
         model.add(Dense(1, activation="linear"))
         model.compile(loss="mape", optimizer="adam")
         return model
@@ -82,7 +90,14 @@ def verify(dataframe, base_str, finish_days, training_days_rate, length_of_seque
 
     predicted = model.predict(x_test, 32, 0)
     result = pd.DataFrame(predicted)
-    mse = mean_squared_error(result, y_test)
+    for date, x_te, res, y_te in zip(date_test, x_test, predicted, y_test):
+        print(date, x_te[-1], res, y_te)
+
+    mask = ~np.isnan(predicted) & ~np.isnan(y_test)
+    predicted_true = predicted[mask]
+    y_test_true = y_test[mask]
+
+    mse = mean_squared_error(predicted_true, y_test_true)
     print(mse)
     # result.columns = ['predict']
     # result['actual'] = y_test
@@ -107,6 +122,8 @@ def tensorflow_test() -> None:
 
 
 def main() -> None:
+    stock.reset_random()
+
     tensorflow_test()
 
 
