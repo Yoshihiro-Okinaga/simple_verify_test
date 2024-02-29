@@ -64,9 +64,15 @@ def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
         'upper_window': 1,
     })
 
-    model: Prophet = Prophet(yearly_seasonality=False, weekly_seasonality=False,
-        daily_seasonality=False, holidays=holidays, changepoint_prior_scale=0.5,
-        changepoint_range=0.9, seasonality_mode='multiplicative')
+    model: Prophet = Prophet(
+        yearly_seasonality=False,
+        weekly_seasonality=False,
+        daily_seasonality=False,
+        holidays=holidays,
+        changepoint_prior_scale=0.5,
+        changepoint_range=0.9,
+        seasonality_mode='multiplicative'
+    )
     assert not np.isnan(x_train.iloc[-1]['y']), '検証値の最後はnullにしないで'
     model.fit(x_train)
     return model

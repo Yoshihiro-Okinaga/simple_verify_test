@@ -55,7 +55,14 @@ class Prediction:
 
     def train(self, X_train, y_train, fit_epochs, fit_batch_size) -> Sequential:
         model = self.create_model()
-        model.fit(X_train, y_train, epochs=fit_epochs, batch_size=fit_batch_size, verbose=0)
+        model.fit(
+            X_train,
+            y_train,
+            epochs=fit_epochs,
+            batch_size=fit_batch_size,
+            validation_split=0.05,
+            verbose=0
+        )
         return model
 
 
@@ -110,7 +117,7 @@ LENGTH_OF_SEQUENCE = 20
 AVERAGE_DAYS = 5
 FINISH_DAYS = 1
 TRAINING_DAYS_RATE = 0.95
-FIT_EPOCHS = 10
+FIT_EPOCHS = 100
 FIT_BATCH_SIZE = 30
 
 def tensorflow_test() -> None:
