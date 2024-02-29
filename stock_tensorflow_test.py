@@ -60,7 +60,7 @@ class Prediction:
             y_train,
             epochs=fit_epochs,
             batch_size=fit_batch_size,
-            validation_split=0.05,
+            validation_split=0.0,
             verbose=0
         )
         return model
@@ -116,7 +116,7 @@ DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
 LENGTH_OF_SEQUENCE = 20
 AVERAGE_DAYS = 5
 FINISH_DAYS = 1
-TRAINING_DAYS_RATE = 0.95
+TRAINING_DAYS_RATE = 0.99
 FIT_EPOCHS = 100
 FIT_BATCH_SIZE = 30
 
