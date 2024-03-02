@@ -11,6 +11,7 @@ from sklearn.metrics import mean_squared_error
 
 sys.path.append("../utility")
 import stock
+import stock_database
 
 if os.name == 'posix':
     from fbprophet import Prophet
@@ -28,15 +29,6 @@ DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
 START_DATE = '2005/01/01'
 END_DATE = '2024/12/31'
 
-# データ読み込み
-def load_data(url: str) -> pd.DataFrame:
-    df: pd.DataFrame = pd.read_csv(url, parse_dates=[0])
-    df = df.sort_values(by='日付')
-    df = df.query('日付 >= @START_DATE')
-    df = df.query('日付 < @END_DATE')
-    df = df[['日付', '始値']]
-    df.columns = ['ds', 'y']
-    return df
 
 # データをトレーニング、テスト、グラフ用に分割
 def split_data(df: pd.DataFrame, no_training_days:int, graph_days:int) -> tuple:
@@ -97,7 +89,11 @@ def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
 
 # メイン
 def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: int) -> None:
-    df = load_data(url)
+    database = database = stock_database.StockDatabase('始値')
+    database.load(DATA_URL, start_date=START_DATE, end_date=END_DATE)
+
+    df = database.data_frame[['日付', '始値']]
+    df.columns = ['ds', 'y']
 
     x_train, x_test, x_graph_test = split_data(df, no_training_days, graph_days)
     model = create_and_train_model(x_train)
