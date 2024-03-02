@@ -60,13 +60,21 @@ class Prediction:
             y_train,
             epochs=fit_epochs,
             batch_size=fit_batch_size,
-            validation_split=0.0,
+            validation_split=0.05,
             verbose=0
         )
         return model
 
 
-def verify(dataframe, base_str, finish_days, training_days_rate, length_of_sequences, fit_epochs, fit_batch_size) -> None:
+def verify(
+        dataframe,
+        base_str,
+        finish_days,
+        training_days_rate,
+        length_of_sequences,
+        fit_epochs,
+        fit_batch_size
+    ) -> None:
 
     prediction = Prediction(finish_days, length_of_sequences)
 
@@ -116,16 +124,27 @@ DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
 LENGTH_OF_SEQUENCE = 20
 AVERAGE_DAYS = 5
 FINISH_DAYS = 1
-TRAINING_DAYS_RATE = 0.99
+TRAINING_DAYS_RATE = 0.95
 FIT_EPOCHS = 100
 FIT_BATCH_SIZE = 30
 
 def tensorflow_test() -> None:
     base_str = '始値'
-    database = stock_database.StockDatabase(base_str, LENGTH_OF_SEQUENCE, AVERAGE_DAYS)
+    database = stock_database.StockDatabase(base_str)
     database.load(DATA_URL, start_date='2005/01/01')
+    database.create_basic_data()
+    database.set_length_of_sequences(LENGTH_OF_SEQUENCE)
+    database.set_average_days(AVERAGE_DAYS)
 
-    verify(database.data_frame, base_str, FINISH_DAYS, TRAINING_DAYS_RATE, LENGTH_OF_SEQUENCE, FIT_EPOCHS, FIT_BATCH_SIZE)
+    verify(
+        database.data_frame,
+        base_str,
+        FINISH_DAYS,
+        TRAINING_DAYS_RATE,
+        LENGTH_OF_SEQUENCE,
+        FIT_EPOCHS,
+        FIT_BATCH_SIZE
+    )
 
 
 def main() -> None:
