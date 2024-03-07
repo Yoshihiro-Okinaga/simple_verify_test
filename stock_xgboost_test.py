@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error
 
 sys.path.append("../utility")
@@ -45,12 +46,33 @@ class Prediction:
         return retX, retY, retDate, start_idx, start_idx + end_idx
 
     def create_model(self) -> xgb.XGBRegressor:
-        model = xgb.XGBRegressor(objective ='reg:squarederror', learning_rate = 0.1,
-                max_depth = 5, n_estimators = 100)
+        model = xgb.XGBRegressor(
+                    objective ='reg:squarederror',
+                    learning_rate = 0.2,
+                    max_depth = 5,
+                    n_estimators = 50
+                )
         return model
 
     def train(self, X_train, y_train) -> xgb.XGBRegressor:
         model = self.create_model()
+        '''
+        param_grid = {
+            'learning_rate': [0.01, 0.1, 0.2, 0.3],
+            'max_depth': [3, 4, 5, 6, 7],
+            'n_estimators': [50, 100, 150, 200]
+        }
+
+        # GridSearchCVを設定します
+        grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
+
+        # モデルの学習を行います
+        grid_search.fit(X_train, y_train)
+
+        # 最適なパラメータを表示します
+        print("Best parameters found: ", grid_search.best_params_)
+        '''
+
         model.fit(X_train, y_train)
         return model
 
@@ -111,8 +133,6 @@ LENGTH_OF_SEQUENCE = 20
 AVERAGE_DAYS = 5
 FINISH_DAYS = 1
 TRAINING_DAYS_RATE = 0.99
-FIT_EPOCHS = 100
-FIT_BATCH_SIZE = 30
 
 def xgboost_test() -> None:
     base_str = '始値'
