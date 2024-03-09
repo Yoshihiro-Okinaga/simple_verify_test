@@ -71,27 +71,27 @@ def verify(
             finish_days
         )
     model = prediction.train(
-        x_train[:train_end_index-train_start_index+1],
-        y_train[:train_end_index-train_start_index+1],
+        x_train[train_start_index:train_end_index+1],
+        y_train[train_start_index:train_end_index+1],
         fit_epochs,
         fit_batch_size
     )
 
     test_file = open('../../TemporaryFolder/tensorflow_result.txt', 'w', encoding=stock.BASE_ENCODING)
 
-    test_file.write(str(date_train[0]) + '\n')
-    test_file.write(str(date_train[train_end_index-train_start_index]) + '\n')
-    test_file.write(str(date_test[0]) + '\n')
-    test_file.write(str(date_test[test_end_index-test_start_index]) + '\n')
+    test_file.write(str(date_train[train_start_index]) + '\n')
+    test_file.write(str(date_train[train_end_index]) + '\n')
+    test_file.write(str(date_test[test_start_index]) + '\n')
+    test_file.write(str(date_test[test_end_index]) + '\n')
 
-    predicted = model.predict(x_test, 32, 0)
+    predicted = model.predict(x_test[test_start_index:], 32, 0)
     result = pd.DataFrame(predicted)
-    for date, x_te, res, y_te in zip(date_test, x_test, predicted, y_test):
+    for date, x_te, res, y_te in zip(date_test[test_start_index:], x_test[test_start_index:], predicted, y_test[test_start_index:]):
         test_file.write(str(date) + ',' + str(x_te[-1]) + ',' + str(res) + ',' + str(y_te) + '\n')
 
-    mask = ~np.isnan(predicted) & ~np.isnan(y_test)
+    mask = ~np.isnan(predicted) & ~np.isnan(y_test[test_start_index:])
     predicted_true = predicted[mask]
-    y_test_true = y_test[mask]
+    y_test_true = y_test[test_start_index:][mask]
 
     mse = mean_squared_error(predicted_true, y_test_true)
     test_file.write(str(mse) + '\n')
