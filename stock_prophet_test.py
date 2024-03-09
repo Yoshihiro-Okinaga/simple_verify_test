@@ -43,6 +43,7 @@ def split_data(df: pd.DataFrame, no_training_days:int, graph_days:int) -> tuple:
     print(mday)
     return x_train, x_test, x_graph_test
 
+
 # 学習モデル作成
 def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
     # 欠損値がある日を見つける
@@ -69,6 +70,7 @@ def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
     model.fit(x_train)
     return model
 
+
 # 予測
 def predict(model: Prophet, periods: int) -> pd.DataFrame:
     # 予測用データ作成
@@ -76,6 +78,7 @@ def predict(model: Prophet, periods: int) -> pd.DataFrame:
     # 予測
     forecast: pd.DataFrame = model.predict(future)
     return forecast
+
 
 # 結果をプロット
 def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
@@ -86,6 +89,7 @@ def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
     ax.legend()
     ax.set_title('test')
     plt.show()
+
 
 # メイン
 def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: int) -> None:
@@ -129,10 +133,12 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     total_df = total_df.dropna(subset='test')
     plot_results(total_df['pred'], total_df['test'])
 
+
 def main() -> None:
     stock.reset_random()
 
     prophet_test(DATA_URL, NO_TRAINING_DAYS, FORECAST_DAYS, GRAPH_DAYS)
+
 
 if __name__ == '__main__':
     main()

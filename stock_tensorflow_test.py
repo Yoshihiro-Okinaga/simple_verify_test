@@ -18,31 +18,6 @@ class Prediction:
         self.__length_of_sequences = length_of_sequences
         self.__finish_days = finish_days
 
-    def load_data(self, data, date, n_prev) -> tuple:
-        X, Y, Date = [], [], []
-        start_idx = n_prev-1
-        end_idx = -1
-        data_len = len(data)
-        date_len = len(date)
-        last_date:pd.Timestamp = date.iloc[-1]
-        for i in range(data_len-(n_prev-1)):
-            X.append(data.iloc[i:(i+n_prev)].to_numpy())
-            if i+n_prev-1 < date_len:
-                Date.append(date.iloc[i+n_prev-1])
-            else:
-                Date.append(last_date)
-                last_date += pd.Timedelta(days=1)
-
-            finish_idx = i+(n_prev-1)+self.__finish_days
-            if finish_idx < data_len:
-                Y.append(data.iloc[finish_idx].to_numpy())
-                end_idx += 1
-            else:
-                Y.append(np.array([np.nan]))#data.iloc[0].to_numpy())
-        retX = np.array(X)
-        retY = np.array(Y)
-        retDate = np.array(Date)
-        return retX, retY, retDate, start_idx, start_idx + end_idx
 
     def create_model(self) -> Sequential:
         model = Sequential()
@@ -52,6 +27,7 @@ class Prediction:
         model.add(Dense(1, activation="linear"))
         model.compile(loss="mape", optimizer="adam")
         return model
+
 
     def train(self, X_train, y_train, fit_epochs, fit_batch_size) -> Sequential:
         model = self.create_model()
@@ -67,7 +43,7 @@ class Prediction:
 
 
 def verify(
-        dataframe,
+        database,
         base_str,
         finish_days,
         training_days_rate,
@@ -76,20 +52,23 @@ def verify(
         fit_batch_size
     ) -> None:
 
+    dataframe = database.data_frame
     prediction = Prediction(finish_days, length_of_sequences)
 
     training_days_pos = int(len(dataframe) * training_days_rate)
     x_train, y_train, date_train, train_start_index, train_end_index = \
-        prediction.load_data(
+        database.create_training_basic_data(
             dataframe[[base_str]].iloc[0:training_days_pos],
             dataframe[[stock.DAY]].iloc[0:training_days_pos],
-            length_of_sequences
+            length_of_sequences,
+            finish_days
         )
     x_test, y_test, date_test, test_start_index, test_end_index = \
-        prediction.load_data(
+    database.create_training_basic_data(
             dataframe[[base_str]].iloc[training_days_pos:],
             dataframe[[stock.DAY]].iloc[training_days_pos:],
-            length_of_sequences
+            length_of_sequences,
+            finish_days
         )
     model = prediction.train(
         x_train[:train_end_index-train_start_index+1],
@@ -132,6 +111,7 @@ TRAINING_DAYS_RATE = 0.95
 FIT_EPOCHS = 100
 FIT_BATCH_SIZE = 30
 
+
 def tensorflow_test() -> None:
     base_str = '始値'
     database = stock_database.StockDatabase(base_str)
@@ -141,7 +121,7 @@ def tensorflow_test() -> None:
     database.set_average_days(AVERAGE_DAYS)
 
     verify(
-        database.data_frame,
+        database,
         base_str,
         FINISH_DAYS,
         TRAINING_DAYS_RATE,

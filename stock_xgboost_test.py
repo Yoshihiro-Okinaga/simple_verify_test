@@ -19,31 +19,6 @@ class Prediction:
         self.__length_of_sequences = length_of_sequences
         self.__finish_days = finish_days
 
-    def load_data(self, data, date, n_prev) -> tuple:
-        X, Y, Date = [], [], []
-        start_idx = n_prev-1
-        end_idx = -1
-        data_len = len(data)
-        date_len = len(date)
-        last_date:pd.Timestamp = date.iloc[-1]
-        for i in range(data_len-(n_prev-1)):
-            X.append(data.iloc[i:(i+n_prev)].to_numpy())
-            if i+n_prev-1 < date_len:
-                Date.append(date.iloc[i+n_prev-1])
-            else:
-                Date.append(last_date)
-                last_date += pd.Timedelta(days=1)
-
-            finish_idx = i+(n_prev-1)+self.__finish_days
-            if finish_idx < data_len:
-                Y.append(data.iloc[finish_idx].to_numpy())
-                end_idx += 1
-            else:
-                Y.append(np.array([np.nan]))#data.iloc[0].to_numpy())
-        retX = np.array(X)
-        retY = np.array(Y)
-        retDate = np.array(Date)
-        return retX, retY, retDate, start_idx, start_idx + end_idx
 
     def create_model(self) -> xgb.XGBRegressor:
         model = xgb.XGBRegressor(
@@ -53,6 +28,7 @@ class Prediction:
                     n_estimators = 50
                 )
         return model
+
 
     def train(self, X_train, y_train) -> xgb.XGBRegressor:
         model = self.create_model()
@@ -78,42 +54,47 @@ class Prediction:
 
 
 def verify(
-        dataframe,
+        database,
         base_str,
         finish_days,
         training_days_rate,
         length_of_sequences
     ) -> None:
 
+    dataframe = database.data_frame
     prediction = Prediction(finish_days, length_of_sequences)
 
     training_days_pos = int(len(dataframe) * training_days_rate)
     x_train, y_train, date_train, train_start_index, train_end_index = \
-        prediction.load_data(
+        database.create_training_basic_data(
             dataframe[[base_str]].iloc[0:training_days_pos],
             dataframe[[stock.DAY]].iloc[0:training_days_pos],
-            length_of_sequences
+            length_of_sequences,
+            finish_days
         )
     x_test, y_test, date_test, test_start_index, test_end_index = \
-        prediction.load_data(
+    database.create_training_basic_data(
             dataframe[[base_str]].iloc[training_days_pos:],
             dataframe[[stock.DAY]].iloc[training_days_pos:],
-            length_of_sequences
+            length_of_sequences,
+            finish_days
         )
     model = prediction.train(
         x_train[:train_end_index-train_start_index+1].reshape((x_train[:train_end_index-train_start_index+1].shape[0], -1)),
         y_train[:train_end_index-train_start_index+1]
     )
 
-    print(date_train[0])
-    print(date_train[train_end_index-train_start_index])
-    print(date_test[0])
-    print(date_test[test_end_index-test_start_index])
+    test_file = open('../../TemporaryFolder/xgboost_result.txt', 'w', encoding=stock.BASE_ENCODING)
+
+    test_file.write(str(date_train[0]) + '\n')
+    test_file.write(str(date_train[train_end_index-train_start_index]) + '\n')
+    test_file.write(str(date_test[0]) + '\n')
+    test_file.write(str(date_test[test_end_index-test_start_index]) + '\n')
 
     predicted = model.predict(x_test.reshape(x_test.shape[0], -1))
     result = pd.DataFrame(predicted)
     for date, x_te, res, y_te in zip(date_test, x_test, predicted, y_test):
-        print(date, x_te[-1], res, y_te)
+        test_file.write(str(date) + ',' + str(x_te[-1]) + ',' + str(res) + ',' + str(y_te) + '\n')
 
     y_test_new =  np.concatenate(y_test)
     mask = ~np.isnan(predicted) & ~np.isnan(y_test_new)
@@ -121,8 +102,9 @@ def verify(
     y_test_true = y_test_new[mask]
 
     mse = mean_squared_error(predicted_true, y_test_true)
-    print(mse)
+    test_file.write(str(mse) + '\n')
 
+    test_file.close()
     # DataFrameに変換
     predicted_true_df = pd.DataFrame(predicted_true, columns=['predicted'])
     predicted_true_df['actual'] = y_test_true
@@ -151,7 +133,7 @@ def xgboost_test() -> None:
     # test_start_index, test_end_index = database.create_training(base_str, FINISH_DAYS, TRAINING_DAYS_RATE, 100.0)
 
     verify(
-        database.data_frame,
+        database,
         base_str,
         FINISH_DAYS,
         TRAINING_DAYS_RATE,
