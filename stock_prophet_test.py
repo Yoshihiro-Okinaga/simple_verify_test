@@ -107,8 +107,12 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     y_pred = forecast[-(no_training_days+forecast_days):]['yhat'].to_numpy()
     y_test = x_test['y'].values
 
+    test_file = open('../../TemporaryFolder/prophet_result.txt', 'w', encoding=stock.BASE_ENCODING)
+
     for date, actual, predicted in zip(y_date, y_test, y_pred):
-        print(date, actual, predicted)
+        test_file.write(str(date) + ',' + str(actual) + ',' + str(predicted) + '\n')
+
+    test_file.close()
 
     last_ytest_data = x_graph_test['y'].values[-1]
     if y_test.size > 0:

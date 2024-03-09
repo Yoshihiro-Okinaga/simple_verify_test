@@ -90,22 +90,26 @@ def verify(dataframe, base_str, finish_days, training_days_rate, length_of_seque
         fit_batch_size
     )
 
-    print(date_train[0])
-    print(date_train[train_end_index-train_start_index])
-    print(date_test[0])
-    print(date_test[test_end_index-test_start_index])
+    test_file = open('../../TemporaryFolder/tensorflow_result.txt', 'w', encoding=stock.BASE_ENCODING)
+
+    test_file.write(str(date_train[0]) + '\n')
+    test_file.write(str(date_train[train_end_index-train_start_index]) + '\n')
+    test_file.write(str(date_test[0]) + '\n')
+    test_file.write(str(date_test[test_end_index-test_start_index]) + '\n')
 
     predicted = model.predict(x_test, 32, 0)
     result = pd.DataFrame(predicted)
     for date, x_te, res, y_te in zip(date_test, x_test, predicted, y_test):
-        print(date, x_te[-1], res, y_te)
+        test_file.write(str(date) + ',' + str(x_te[-1]) + ',' + str(res) + ',' + str(y_te) + '\n')
 
     mask = ~np.isnan(predicted) & ~np.isnan(y_test)
     predicted_true = predicted[mask]
     y_test_true = y_test[mask]
 
     mse = mean_squared_error(predicted_true, y_test_true)
-    print(mse)
+    test_file.write(str(mse) + '\n')
+
+    test_file.close()
     # result.columns = ['predict']
     # result['actual'] = y_test
     # result.plot()
