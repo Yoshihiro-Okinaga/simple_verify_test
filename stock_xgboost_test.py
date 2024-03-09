@@ -122,10 +122,14 @@ def verify(
 
     mse = mean_squared_error(predicted_true, y_test_true)
     print(mse)
-    # result.columns = ['predict']
-    # result['actual'] = y_test
-    # result.plot()
-    # plt.show()
+
+    # DataFrameに変換
+    predicted_true_df = pd.DataFrame(predicted_true, columns=['predicted'])
+    predicted_true_df['actual'] = y_test_true
+
+    # グラフをプロット
+    predicted_true_df.plot()
+    plt.show()
 
 
 DATA_URL = '../PythonData/FXCFDData/USD_JPY.txt'
