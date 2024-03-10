@@ -93,7 +93,7 @@ def plot_results(ypred: np.ndarray, ytest: np.ndarray) -> None:
 
 # メイン
 def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: int) -> None:
-    database = database = stock_database.StockDatabase('始値')
+    database = stock_database.StockDatabase('始値')
     database.load(DATA_URL, start_date=START_DATE, end_date=END_DATE)
 
     df = database.data_frame[['日付', '始値']]
