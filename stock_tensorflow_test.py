@@ -7,39 +7,35 @@ from sklearn import preprocessing
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, LSTM, SimpleRNN
 from sklearn.metrics import mean_squared_error
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+from sklearn.model_selection import GridSearchCV
 
 sys.path.append("../utility")
 import stock
 import stock_database
 
-class Prediction:
 
-    def __init__(self, finish_days, length_of_sequences):
-        self.__length_of_sequences = length_of_sequences
-        self.__finish_days = finish_days
-
-
-    def create_model(self) -> Sequential:
-        model = Sequential()
-        model.add(SimpleRNN(300, return_sequences=False))
-        model.add(Dense(64, activation="linear"))
-        model.add(Dense(128, activation="linear"))
-        model.add(Dense(1, activation="linear"))
-        model.compile(loss="mape", optimizer="adam")
-        return model
+def create_model(activation, loss, optimizer) -> Sequential:
+    model = Sequential()
+    model.add(LSTM(300, return_sequences=False))
+    model.add(Dense(64, activation=activation))
+    model.add(Dense(128, activation=activation))
+    model.add(Dense(1, activation=activation))
+    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+    return model
 
 
-    def train(self, X_train, y_train, fit_epochs, fit_batch_size) -> Sequential:
-        model = self.create_model()
-        model.fit(
-            X_train,
-            y_train,
-            epochs=fit_epochs,
-            batch_size=fit_batch_size,
-            validation_split=0.05,
-            verbose=0
-        )
-        return model
+def train(X_train, y_train, fit_epochs, fit_batch_size) -> Sequential:
+    model = create_model('relu', 'mean_squared_error', 'Adam')
+    model.fit(
+        X_train,
+        y_train,
+        epochs=fit_epochs,
+        batch_size=fit_batch_size,
+        validation_split=0.05,
+        verbose=0
+    )
+    return model
 
 
 def verify(
@@ -53,7 +49,6 @@ def verify(
     ) -> None:
 
     dataframe = database.data_frame
-    prediction = Prediction(finish_days, length_of_sequences)
 
     training_days_pos = int(len(dataframe) * training_days_rate)
     x_train, y_train, date_train, train_start_index, train_end_index = \
@@ -70,12 +65,28 @@ def verify(
             length_of_sequences,
             finish_days
         )
-    model = prediction.train(
+    '''
+    model = train(
         x_train[train_start_index:train_end_index+1],
         y_train[train_start_index:train_end_index+1],
         fit_epochs,
         fit_batch_size
     )
+    '''
+
+    model = KerasRegressor(build_fn=create_model, verbose=0)
+
+    param_grid = {
+        'activation': ['relu', 'tanh', 'sigmoid'],
+        'loss': ['mean_squared_error', 'mean_absolute_error'],
+        'optimizer': ['Adam', 'Adadelta']
+    }
+
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
+    grid_result = grid.fit(x_train[train_start_index:train_end_index+1], y_train[train_start_index:train_end_index+1])
+
+    print("Best parameters found: ", grid_result.best_params_)
+    print("Best score: ", grid_result.best_score_)
 
     test_file = open('../../TemporaryFolder/tensorflow_result.txt', 'w', encoding=stock.BASE_ENCODING)
 

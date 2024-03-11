@@ -109,6 +109,11 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
 
     test_file = open('../../TemporaryFolder/prophet_result.txt', 'w', encoding=stock.BASE_ENCODING)
 
+    test_file.write(str(x_train.iloc[0]['ds']) + '\n')
+    test_file.write(str(x_train.iloc[-1]['ds']) + '\n')
+    test_file.write(str(x_test.iloc[0]['ds']) + '\n')
+    test_file.write(str(x_test.iloc[-1]['ds']) + '\n')
+
     for date, actual, predicted in zip(y_date, y_test, y_pred):
         test_file.write(str(date) + ',' + str(actual) + ',' + str(predicted) + '\n')
 
