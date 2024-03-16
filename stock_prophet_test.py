@@ -30,20 +30,6 @@ START_DATE = '2005/01/01'
 END_DATE = '2024/12/31'
 
 
-# データをトレーニング、テスト、グラフ用に分割
-def split_data(df: pd.DataFrame, no_training_days:int, graph_days:int) -> tuple:
-    mday: pd.Timestamp = df['ds'].iloc[-1] - offsets.Day(no_training_days)
-    graph_start_mday: pd.Timestamp = df['ds'].iloc[-1] - offsets.Day(no_training_days + graph_days)
-    train_index = df['ds'] <= mday
-    test_index = df['ds'] > mday
-    graph_train_index = (df['ds'] > graph_start_mday) & train_index
-    x_train: pd.DataFrame = df[train_index]
-    x_test: pd.DataFrame = df[test_index]
-    x_graph_test: pd.DataFrame = df[graph_train_index]
-    print(mday)
-    return x_train, x_test, x_graph_test
-
-
 # 学習モデル作成
 def create_and_train_model(x_train: pd.DataFrame) -> Prophet:
     # 欠損値がある日を見つける
@@ -99,31 +85,46 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
     df = database.data_frame[['日付', '始値']]
     df.columns = ['ds', 'y']
 
-    x_train, x_test, x_graph_test = split_data(df, no_training_days, graph_days)
-    model = create_and_train_model(x_train)
+    training_days = len(df) - no_training_days
+    retX, retY, ret_date, start_idx, end_idx = \
+        database.create_training_basic_data(
+            df[['y']],
+            df[['ds']],
+            1,
+            1,
+            0,
+            training_days + 1,
+            True
+        )
+
+    model = create_and_train_model(df[start_idx:end_idx+1])
 
     forecast = predict(model, no_training_days+forecast_days)
     y_date = forecast[-(no_training_days+forecast_days):]['ds'].dt.date.to_numpy()
     y_pred = forecast[-(no_training_days+forecast_days):]['yhat'].to_numpy()
-    y_test = x_test['y'].values
+    x_graph_test: pd.DataFrame = df.iloc[-no_training_days-graph_days:]
 
+    #y_test = x_test['y'].values
+    y_test = df['y'].iloc[end_idx+1:].values
+
+    print(len(y_test))
+    print(len(y_date))
+    print(type(y_test))
+
+    for i in range(len(y_date) - len(y_test)):
+        y_test = np.append(y_test, np.nan)
+    print(len(y_test))
     test_file = open('../../TemporaryFolder/prophet_result.txt', 'w', encoding=stock.BASE_ENCODING)
 
-    test_file.write(str(x_train.iloc[0]['ds']) + '\n')
-    test_file.write(str(x_train.iloc[-1]['ds']) + '\n')
-    test_file.write(str(x_test.iloc[0]['ds']) + '\n')
-    test_file.write(str(x_test.iloc[-1]['ds']) + '\n')
+    test_file.write(str(ret_date[start_idx]) + '\n')
+    test_file.write(str(ret_date[end_idx]) + '\n')
+    test_file.write(str(ret_date[end_idx+1]) + '\n')
+    test_file.write(str(ret_date[-1]) + '\n')
 
     for date, actual, predicted in zip(y_date, y_test, y_pred):
         test_file.write(str(date) + ',' + str(actual) + ',' + str(predicted) + '\n')
 
     test_file.close()
-
-    last_ytest_data = x_graph_test['y'].values[-1]
-    if y_test.size > 0:
-        last_ytest_data = y_test[-1]
-    for i in range(forecast_days):
-        y_test = np.append(y_test, last_ytest_data)
 
     mask = ~np.isnan(y_pred) & ~np.isnan(y_test)
     y_pred_true = y_pred[mask]
@@ -137,6 +138,7 @@ def prophet_test(url:str, no_training_days:int, forecast_days:int, graph_days: i
                              columns=['pred', 'test'])
     total_df = total_df.dropna(subset='test')
     plot_results(total_df['pred'], total_df['test'])
+    
 
 
 def main() -> None:

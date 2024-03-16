@@ -67,17 +67,23 @@ def verify(
     training_days_pos = int(len(dataframe) * training_days_rate)
     x_train, y_train, date_train, train_start_index, train_end_index = \
         database.create_training_basic_data(
-            dataframe[[base_str]].iloc[0:training_days_pos],
-            dataframe[[stock.DAY]].iloc[0:training_days_pos],
+            dataframe[[base_str]],
+            dataframe[[stock.DAY]],
             length_of_sequences,
-            finish_days
+            finish_days,
+            0,
+            training_days_pos,
+            False
         )
     x_test, y_test, date_test, test_start_index, test_end_index = \
     database.create_training_basic_data(
-            dataframe[[base_str]].iloc[training_days_pos:],
-            dataframe[[stock.DAY]].iloc[training_days_pos:],
+            dataframe[[base_str]],
+            dataframe[[stock.DAY]],
             length_of_sequences,
-            finish_days
+            finish_days,
+            training_days_pos,
+            -1,
+            False,
         )
     model = prediction.train(
     	x_train[train_start_index:train_end_index+1].reshape((x_train[train_start_index:train_end_index+1].shape[0], -1)),
